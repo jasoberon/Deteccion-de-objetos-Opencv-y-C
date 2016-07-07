@@ -1,0 +1,56 @@
+// webcam_contorno.cpp
+
+#include<opencv2/core/core.hpp>
+#include<opencv2/highgui/highgui.hpp>
+#include<opencv2/imgproc/imgproc.hpp>
+
+#include<iostream>
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+int main() {
+	cv::VideoCapture capWebcam(0);		// declara objeto a VideoCapture y lo asocia a una webcam, 0 => utiliza 1er webcam
+
+	if (capWebcam.isOpened() == false) {			// verifica si VideoCapture se asoció a una webcam satisfactoriamente
+		std::cout << "error: capWebcam sin acceso \n\n";	// si no, muestra mensaje de error con std out
+		return(0);														// se sale del programa
+	}
+
+	cv::Mat imgOriginal;		// entrada de imagen
+	cv::Mat imgGrayscale;		// escala de grises de la imagen de entrada
+	cv::Mat imgBlurred;			// iamgen borrosa intermedia (blured)
+	cv::Mat imgCanny;			// contorno de la imagen
+
+	char charCheckForEscKey = 0;
+
+	while (charCheckForEscKey != 27 && capWebcam.isOpened()) {		// hasta que se pulsa la tecla Esc o la conexión de la wecam se pierde
+		bool blnFrameReadSuccessfully = capWebcam.read(imgOriginal);		// obtiene siguiente cuadro
+
+		if (!blnFrameReadSuccessfully || imgOriginal.empty()) {		// si el cuadro no se lee satisfactoriamente
+			std::cout << "error: frame not read from webcam\n";		// se muestra mensaje de error (std out)
+			break;													// y se sale del while loop
+		}
+
+		cv::cvtColor(imgOriginal, imgGrayscale, CV_BGR2GRAY);		// convierte a escala de grises
+
+		cv::GaussianBlur(imgGrayscale,			// imagen entrante
+			imgBlurred,							// sale imagen
+			cv::Size(5, 5),						// suavizado (smoothing) ancho de la ventana y la altura en píxeles
+			1.8);								// valor sigma, determina que tanto la imagen será borrosa
+
+		cv::Canny(imgBlurred,			// imagen entrante
+			imgCanny,					// salida de imagen
+			50,							// (threshold: límite) bajo
+			100);						// límite alto
+
+		// declaración de ventana
+		cv::namedWindow("imgOriginal", CV_WINDOW_NORMAL);	// se usa CV_WINDOW_NORMAL que permite cambiar el tamaño de la ventana
+		cv::namedWindow("imgCanny", CV_WINDOW_NORMAL); // ó CV_WINDOW_AUTOSIZE para una ventana fija y tamaño de acuerdo a la resolución de la imagen
+		// CV_WINDOW_AUTOSIZE está por default
+		cv::imshow("imgOriginal", imgOriginal);		// muestra ventana
+		cv::imshow("imgCanny", imgCanny);
+
+		charCheckForEscKey = cv::waitKey(1);		// retardo en miliseg y espera tecla a ser presionada (get key press), si se presiona cualquier tecla
+	}	// termina el while
+
+	return(0);
+}

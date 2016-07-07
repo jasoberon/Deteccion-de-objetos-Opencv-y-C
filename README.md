@@ -1,2 +1,2 @@
 # Deteccion-de-objetos-Opencv-y-C-
-Codigo para reconocimiento de objetos, Tesi
+Codigo para reconocimiento de objetos, Tesis

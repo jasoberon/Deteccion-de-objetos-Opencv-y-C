@@ -1,0 +1,173 @@
+#include <iostream>
+#include <string>
+#include <vector>
+
+#include <opencv2/highgui/highgui.hpp>
+#include <opencv2/imgproc/imgproc.hpp>
+#include <opencv2/opencv.hpp>
+
+using namespace cv;
+using namespace std;
+
+
+int main(int argc, char* argv[])
+{
+	VideoCapture cap(1);  //selecciona camara. 0 local, 1 externa
+
+	if (cap.isOpened() == false)
+	{
+		cout << "No se puede conectar la video camara" << endl;
+		cin.get();    //espera a que se presione cualquier tecla
+		return -1;
+	}
+
+	//***** creacion de los controles ***************************
+
+	namedWindow("Controles", CV_WINDOW_AUTOSIZE); //crea ventana llamada "Controles, y posición inicial"
+
+	int iLowH = 0;                 // 0
+	int iHighH = 179;              // 179
+
+	int iLowS = 121;                 // 0
+	int iHighS = 255;              // 255
+
+	int iLowV = 49;                // 0
+	int iHighV = 121;             // 99
+
+//Crea las barras "trackbars" en la ventana de "Controles"
+
+	cvCreateTrackbar("LowH", "Controles", &iLowH, 179); //Hue (0 - 179)
+	cvCreateTrackbar("HighH", "Controles", &iHighH, 179);
+	cvCreateTrackbar("LowS", "Controles", &iLowS, 255); //Saturation (0 - 255)
+	cvCreateTrackbar("HighS", "Controles", &iHighS, 255);
+	cvCreateTrackbar("LowV", "Controles", &iLowV, 255); //Value (0 - 255)
+	cvCreateTrackbar("HighV", "Controles", &iHighV, 255);
+
+	//*********** Obtener y mostrar la resolición del video *******************
+
+	double dWidth = cap.get(CAP_PROP_FRAME_WIDTH);   //get the width of frames of the video
+	double dHeight = cap.get(CAP_PROP_FRAME_HEIGHT); //get the height of frames of the video
+
+	cout << "Resolution of the video : " << dWidth << " x " << dHeight << endl;
+
+	string window_name = "My Camera Feed";
+	namedWindow(window_name); //create a window called "My Camera Feed"
+
+
+							  //********************** Inicio *******************************************
+	while (true)
+	{
+		Mat frame, hsv, binary;
+
+		Rect r = Rect(0, 0, 640, 480);	//to create a Rect with top-left vertex at (0,0), of width 640 and height 480 pixels.
+
+
+		bool bSuccess = cap.read(frame);    // read a new frame from video 
+
+		if (bSuccess == false)
+		{
+			cout << "Video camera is disconnected" << endl;
+			cin.get(); //Wait for any key press
+			break;
+		}
+
+		// convertir imagen RGB a HSV 
+		cvtColor(frame, hsv, CV_BGR2HSV);
+
+		// aplicar filtro para color deseado
+		inRange(hsv, Scalar(iLowH, iLowS, iLowV), Scalar(iHighH, iHighS, iHighV), binary);   //Threshold the image, guarda en binary
+
+																							 // aplicar tranformaciones morfologicas (extrae la region de interes)
+		Mat element = getStructuringElement(MORPH_RECT, Size(15, 15));
+		erode(binary, binary, element);
+		dilate(binary, binary, element);
+		dilate(binary, binary, element); //doble dilate hace reduce el ruido
+
+		// buscar contornos en la imagen binaria
+		vector< vector<Point> > contours;
+		findContours(binary, contours, CV_RETR_EXTERNAL, CV_CHAIN_APPROX_SIMPLE);
+
+		cout << "contornos: " << contours.size() << endl;
+
+		//******************
+		vector<Moments> mu(contours.size());
+		for (int i = 0; i < contours.size(); i++)
+		{
+			mu[i] = moments(contours[i], false);
+		}
+
+		//https://jayrambhia.wordpress.com/2012/06/23/get-data-from-mat-cvmat-in-opencv/
+
+	
+		//  Get the mass centers:
+		vector<Point2f> mc(contours.size());
+		for (int i = 0; i < contours.size(); i++)
+		{
+			mc[i] = Point2f(mu[i].m10 / mu[i].m00, mu[i].m01 / mu[i].m00);
+		}
+
+				
+		// dibujar todos los contornos encontrados
+		drawContours(binary, contours, -1, Scalar(255), CV_FILLED);
+
+		// dibujar rectangulo y texto con coordenadas (x, y)
+		for (vector<Point> contour : contours) {
+
+			Rect r = boundingRect(contour);  // dibujar rectangulo. Calculo
+			rectangle(frame, r, CV_RGB(255, 0, 0), 2, CV_AA, 0);  // dibuja el rectangulo
+
+			Point center(r.x + (r.width / 2), r.y + (r.height / 2));
+
+			ostringstream str;
+			str << center.x << "," << center.y;
+
+			// mostrar texto (x, y)
+			putText(frame, str.str(), center, FONT_HERSHEY_COMPLEX_SMALL, 0.60, CV_RGB(0, 255, 0), 1, CV_AA);
+
+		}
+		
+		/*------------------------------------------------------------------------
+
+		/* ******************* TEST *************************************
+
+		for (int y = 0; y<frame.rows; y++)
+		{
+		for (int x = 0; x<frame.cols; x++)
+		{
+		// get pixel
+		Vec3b color = frame.at<Vec3b>(Point(x, y));
+		if  (int x = 0)
+		{
+		cout << "Blanco" << endl;
+		}
+		// ... do something to the color ....
+
+		// set pixel
+		frame.at<Vec3b>(Point(x, y)) = color;
+		}
+		}
+
+		https://stackoverflow.com/questions/23001512/c-and-opencv-get-and-set-pixel-color-to-mat
+		*/
+
+		//*********** Dibujar sobre Frame y mostrar demas cosas
+
+		rectangle(frame, r, Scalar(0, 255, 0), 5, 8, 0);
+		//draw the rect defined by r with line thickness 1 and green color
+		line(frame, Point(320, 0), Point(320, 480), CV_RGB(0, 255, 0), 2, CV_AA);     //muestra coordenada
+		line(frame, Point(0, 240), Point(640, 240), CV_RGB(0, 255, 0), 2, CV_AA);     //muestra coordenada
+
+		//imshow("Track Color", frame);
+		imshow("Track Color - Binary", binary);
+		imshow(window_name, frame);      //show the frame in the created window
+
+
+		if (waitKey(10) == 27)                                                 //wait for for 10 ms until any key is pressed.
+		{                                                                      //If the 'Esc' key is pressed, break the while loop.
+			cout << "Esc key is pressed by user. Stoppig the video" << endl;   //If the any other key is pressed, continue the loop 
+			break;                                                             //If any key is not pressed withing 10 ms, continue the loop
+		}
+	}
+
+	return 0;
+}

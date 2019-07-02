@@ -124,6 +124,10 @@ int main(int argc, char* argv[])
 			// mostrar texto (x, y)
 			putText(frame, str.str(), center, FONT_HERSHEY_COMPLEX_SMALL, 0.60, CV_RGB(0, 255, 0), 1, CV_AA);
 
+			if (center.x > 100 && center.y < 100)
+			{
+				cout << "Detectado" << endl;
+			}
 		}
 		
 		/*------------------------------------------------------------------------

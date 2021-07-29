@@ -1,5 +1,6 @@
-# Deteccion-de-objetos-Opencv-y-C-
-Codigo para reconocimiento de objetos, Tesis
+# Deteccion-de-objetos-Opencv-y-C++
+Codigo para reconocimiento de objetos.
+Utilizando lenguaje C++
 
 https://www.learnopencv.com/find-center-of-blob-centroid-using-opencv-cpp-python/
 https://www.learnopencv.com/blob-detection-using-opencv-python-c/
